@@ -1,16 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Template.Business.Models;
+﻿using Template.Business.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Template.Data.Context
 {
     public class MeuDbContext : DbContext
     {
-        public MeuDbContext(DbContextOptions options) : base(options)
+        public MeuDbContext(DbContextOptions<MeuDbContext> options) : base(options)
         {
             ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
             ChangeTracker.AutoDetectChangesEnabled = false;
