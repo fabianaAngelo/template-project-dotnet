@@ -11,12 +11,18 @@ namespace Template.Api.Controllers
     {
         private readonly IFornecedorRepository _fornecedorRepository;
         private readonly IFornecedorService _fornecedorService;
+        private readonly IEnderecoRepository _enderecoRepository;
         private readonly IMapper _mapper;
-        public FornecedoresController(IFornecedorRepository fornecedorRepository, IMapper mapper, IFornecedorService fornecedorService)
+        public FornecedoresController(IFornecedorRepository fornecedorRepository, 
+            IMapper mapper,
+            IFornecedorService fornecedorService,
+            INotificador notificador,
+            IEnderecoRepository enderecoRepository) : base(notificador)
         {
             _fornecedorRepository = fornecedorRepository;
             _fornecedorService = fornecedorService;
             _mapper = mapper;
+            _enderecoRepository = enderecoRepository;
         }
 
         [HttpGet]
@@ -39,46 +45,64 @@ namespace Template.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<FornecedorViewModel>> Adicionar(FornecedorViewModel fornecedorViewModel)
         {
-            if (!ModelState.IsValid) return BadRequest();
+            if (!ModelState.IsValid) return CustomResponse(ModelState);
 
-            var fornecedor = _mapper.Map<Fornecedor>(fornecedorViewModel);
-            var result = await _fornecedorService.Adicionar(fornecedor);
+            await _fornecedorService.Adicionar(_mapper.Map<Fornecedor>(fornecedorViewModel));
 
-            if (!result) return BadRequest();
-
-            //return Ok(fornecedor);
-            return Ok(_mapper.Map<FornecedorViewModel>(fornecedor));
+            return CustomResponse(fornecedorViewModel);
         }
 
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<FornecedorViewModel>> Atualizar(Guid id, FornecedorViewModel fornecedorViewModel)
         {
-            if(id != fornecedorViewModel.Id) return BadRequest();
+            if (id != fornecedorViewModel.Id)
+            {
+                NotificarError("O id informado não é o campo que foi passado na query");
+                return CustomResponse(fornecedorViewModel);
+            }
 
-            if (!ModelState.IsValid) return BadRequest();
+            if (!ModelState.IsValid) return CustomResponse(ModelState);
 
-            var fornecedor = _mapper.Map<Fornecedor>(fornecedorViewModel);
-            var result = await _fornecedorService.Atualizar(fornecedor);
+            await _fornecedorService.Atualizar(_mapper.Map<Fornecedor>(fornecedorViewModel));
 
-            if (!result) return BadRequest();
-
-            //return Ok(fornecedor);
-            return Ok(_mapper.Map<FornecedorViewModel>(fornecedor));
+            return CustomResponse(fornecedorViewModel);
         }
 
         [HttpDelete("{id:guid}")]
         public async Task<ActionResult<FornecedorViewModel>> Excluir(Guid id)
         {
-            var fornecedor = await ObterFornecedorEndereco(id);
+            var fornecedorViewModel = await ObterFornecedorEndereco(id);
 
-            if (fornecedor == null) return NotFound();
+            if (fornecedorViewModel == null) return NotFound();
 
-            var result = await _fornecedorService.Remover(id);
+            await _fornecedorService.Remover(id);
 
-            if (!result) return BadRequest();
-            return Ok(fornecedor);
+            return CustomResponse(fornecedorViewModel);
 
         }
+
+        [HttpGet("obter-endereco/{id:guid}")]
+        public async Task<EnderecoViewModel> ObterEnderecoPorId(Guid id)
+        {
+            return _mapper.Map<EnderecoViewModel>(await _enderecoRepository.ObterPorId(id));
+        }
+
+        [HttpPut("atualizar-endereco/{id:guid}")]
+        public async Task<ActionResult> AtualizarEndereco(Guid id, EnderecoViewModel enderecoViewModel)
+        {
+            if (id != enderecoViewModel.Id)
+            {
+                NotificarError("O id informado não é o campo que foi passado na query");
+                return CustomResponse(enderecoViewModel);
+            }
+
+            if (!ModelState.IsValid) return CustomResponse(ModelState);
+
+            await _fornecedorService.AtualizarEndereco(_mapper.Map<Endereco>(enderecoViewModel));
+
+            return CustomResponse(enderecoViewModel);
+        }
+
         public async Task<FornecedorViewModel> ObterFornecedorProdudosEndereco(Guid id)
         {
             return _mapper.Map<FornecedorViewModel>(await _fornecedorRepository.ObterFornecedorProdutosEndereco(id));
